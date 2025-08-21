@@ -15,19 +15,21 @@ import {
 } from "@/components/ui/card";
 import { toast } from "sonner";
 
-interface ContextData {
-  sourceId: string;
-  title: string;
-  domain: string;
-  tier: number;
-  content: string;
-  tags: string[];
-}
-
+// === Tipos ===
 interface Domain {
+  _additional: { id: string };
   domain: string;
   priority: string;
   anchor_behavior: string;
+}
+
+interface ContextData {
+  sourceId: string;
+  title: string;
+  tier: number;
+  content: string;
+  tags: string[];
+  domain_ref: Array<{ id: string }>;
 }
 
 // Type for data returned by the chunk API
@@ -35,6 +37,7 @@ interface ChunkData {
   sourceId: string;
   title: string;
   domain: string;
+  domain_ref?: Array<{ id: string }>;
   tier: number;
   source_name: string;
   tags: string[];
@@ -43,20 +46,25 @@ interface ChunkData {
 const defaultContext: ContextData = {
   sourceId: "",
   title: "",
-  domain: "",
   tier: 3,
   content: "",
   tags: [],
+  domain_ref: [],
 };
 
-export default function ContextUploadForm() {
+interface ContextUploadFormProps {
+  compact?: boolean;
+}
+
+export default function ContextUploadForm({ compact = false }: ContextUploadFormProps) {
   const [formData, setFormData] = useState<ContextData>(defaultContext);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [domains, setDomains] = useState<Domain[]>([]);
   const [loadingDomains, setLoadingDomains] = useState<boolean>(true);
   const [loadingChunk, setLoadingChunk] = useState<boolean>(false);
+  const [tagInput, setTagInput] = useState<string>("");
 
-  // Load domains on component mount
+  // Carregar domínios
   useEffect(() => {
     const fetchDomains = async () => {
       try {
@@ -66,8 +74,12 @@ export default function ContextUploadForm() {
         const data: Domain[] = await response.json();
         setDomains(data);
 
-        if (data.length > 0 && !formData.domain) {
-          setFormData((prev) => ({ ...prev, domain: data[0].domain }));
+        // Define o primeiro domínio como padrão
+        if (data.length > 0 && formData.domain_ref.length === 0) {
+          setFormData((prev) => ({
+            ...prev,
+            domain_ref: [{ id: data[0]._additional.id }],
+          }));
         }
       } catch (error) {
         console.error("Error loading domains:", error);
@@ -80,20 +92,43 @@ export default function ContextUploadForm() {
     fetchDomains();
   }, []);
 
-  const handleChange = (field: keyof ContextData, value: string) => {
+  // Sincroniza tags
+  useEffect(() => {
+    setTagInput(formData.tags.join(", "));
+  }, [formData.tags]);
+
+  const syncTags = () => {
+    const tags = tagInput
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter((tag) => tag);
+    setFormData((prev) => ({ ...prev, tags }));
+  };
+
+  const handleChange = (field: keyof Omit<ContextData, "domain_ref">, value: string) => {
     const parsedValue = field === "tier" ? parseInt(value) || 3 : value;
     setFormData((prev) => ({ ...prev, [field]: parsedValue }));
   };
 
-  const handleTagsChange = (value: string) => {
-    const tags = value
-      .split(",")
-      .map((tag) => tag.trim())
-      .filter((tag) => tag.length > 0);
-    setFormData((prev) => ({ ...prev, tags }));
+  const handleDomainChange = (domainId: string, checked: boolean) => {
+    if (checked) {
+      // Adiciona
+      if (!formData.domain_ref.some((ref) => ref.id === domainId)) {
+        setFormData((prev) => ({
+          ...prev,
+          domain_ref: [...prev.domain_ref, { id: domainId }],
+        }));
+      }
+    } else {
+      // Remove
+      setFormData((prev) => ({
+        ...prev,
+        domain_ref: prev.domain_ref.filter((ref) => ref.id !== domainId),
+      }));
+    }
   };
 
-  // Function triggered when leaving the sourceId field
+  // Carregar dados ao sair do campo ID
   const handleSourceIdBlur = async () => {
     const id = formData.sourceId.trim();
     if (!id) return;
@@ -112,14 +147,13 @@ export default function ContextUploadForm() {
 
       const data: ChunkData = await response.json();
 
-      // Update form with chunk data, except content
       setFormData((prev) => ({
         ...prev,
         title: data.title || data.source_name || prev.title,
-        domain: data.domain || prev.domain,
         tier: data.tier || prev.tier,
         tags: Array.isArray(data.tags) ? data.tags : prev.tags,
-        // Keep content empty for editing
+        domain_ref: Array.isArray(data.domain_ref) ? data.domain_ref : prev.domain_ref,
+        // Mantém o conteúdo vazio para edição
       }));
 
       toast.success("✅ Context data loaded from ID.");
@@ -134,8 +168,8 @@ export default function ContextUploadForm() {
   const handleSubmit = async () => {
     setIsSubmitting(true);
 
-    if (!formData.title || !formData.sourceId || !formData.domain) {
-      toast.error("Please fill in required fields: ID, title, and domain.");
+    if (!formData.title || !formData.sourceId || formData.domain_ref.length === 0) {
+      toast.error("Please fill in required fields: ID, title, and at least one domain.");
       setIsSubmitting(false);
       return;
     }
@@ -151,8 +185,11 @@ export default function ContextUploadForm() {
 
       if (response.ok) {
         toast.success("✅ Context submitted successfully!");
-        // Reset with default domain
-        setFormData({ ...defaultContext, domain: domains.length > 0 ? domains[0].domain : "" });
+        // Reset com domínio padrão
+        setFormData({
+          ...defaultContext,
+          domain_ref: domains.length > 0 ? [{ id: domains[0]._additional.id }] : [],
+        });
       } else {
         let errorData;
         const contentType = response.headers.get("content-type");
@@ -183,106 +220,112 @@ export default function ContextUploadForm() {
   };
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className={compact ? "shadow-none border-0" : undefined}>
+      <CardHeader className={compact ? "pb-2" : undefined}>
         <CardTitle>Submit Ethical Context</CardTitle>
         <CardDescription>
           Enter a moral or conceptual context to enrich the AI&apos;s decision-making domain.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
-        <div>
-          <label className="text-sm font-medium">Source ID (required)</label>
-          <div className="flex gap-2">
+      <CardContent className={compact ? "space-y-4" : "space-y-6"}>
+        <div className={compact ? "max-h-[65vh] overflow-auto pr-2" : undefined}>
+          <div>
+            <label className="text-sm font-medium">Source ID (required)</label>
+            <div className="flex gap-2">
+              <Input
+                value={formData.sourceId}
+                onChange={(e) => handleChange("sourceId", e.target.value)}
+                onBlur={handleSourceIdBlur}
+                placeholder="e.g.: context_01"
+                required
+                disabled={loadingChunk}
+              />
+              {loadingChunk && (
+                <div className="flex items-center">
+                  <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium">Title (required)</label>
             <Input
-              value={formData.sourceId}
-              onChange={(e) => handleChange("sourceId", e.target.value)}
-              onBlur={handleSourceIdBlur}
-              placeholder="e.g.: context_01"
+              value={formData.title}
+              onChange={(e) => handleChange("title", e.target.value)}
+              placeholder="e.g.: The Four Principles of Biomedical Ethics..."
               required
-              disabled={loadingChunk}
             />
-            {loadingChunk && (
-              <div className="flex items-center">
-                <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium">Domains (required)</label>
+            {loadingDomains ? (
+              <p className="text-sm text-muted-foreground">Loading domains...</p>
+            ) : !Array.isArray(domains) || domains.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No domains available.</p>
+            ) : (
+              <div className="space-y-1 max-h-40 overflow-y-auto border rounded p-2">
+                {domains.map((d) => {
+                  if (!d._additional?.id) return null;
+                  const isSelected = formData.domain_ref.some((ref) => ref.id === d._additional.id);
+                  return (
+                    <label
+                      key={d._additional.id}
+                      className="flex items-center gap-2 cursor-pointer text-sm"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={(e) => handleDomainChange(d._additional.id, e.target.checked)}
+                        className="size-4"
+                      />
+                      <span>
+                        {d.domain} ({d.priority})
+                      </span>
+                    </label>
+                  );
+                })}
               </div>
             )}
           </div>
-        </div>
 
-        <div>
-          <label className="text-sm font-medium">Title (required)</label>
-          <Input
-            value={formData.title}
-            onChange={(e) => handleChange("title", e.target.value)}
-            placeholder="e.g.: The Four Principles of Biomedical Ethics..."
-            required
-          />
-        </div>
+          <div>
+            <label className="text-sm font-medium">Tier Level</label>
+            <Input
+              type="number"
+              min="1"
+              max="3"
+              value={formData.tier}
+              onChange={(e) => handleChange("tier", e.target.value)}
+            />
+          </div>
 
-        <div>
-          <label className="text-sm font-medium">Domain (required)</label>
-          {loadingDomains ? (
-            <p className="text-sm text-muted-foreground">Loading domains...</p>
-          ) : (
-            <select
-              value={formData.domain}
-              onChange={(e) => handleChange("domain", e.target.value)}
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              required
-            >
-              {domains.length === 0 ? (
-                <option>No domain available</option>
-              ) : (
-                domains.map((d) => (
-                  <option key={d.domain} value={d.domain}>
-                    {d.domain} ({d.priority})
-                  </option>
-                ))
-              )}
-            </select>
-          )}
-        </div>
+          <div>
+            <label className="text-sm font-medium">Conceptual Content</label>
+            <Textarea
+              value={formData.content}
+              onChange={(e) => handleChange("content", e.target.value)}
+              rows={compact ? 6 : 8}
+              placeholder="Develop the ethical, conceptual, or philosophical context to be considered by the AI..."
+            />
+          </div>
 
-        <div>
-          <label className="text-sm font-medium">Tier Level</label>
-          <Input
-            type="number"
-            min="1"
-            max="3"
-            value={formData.tier}
-            onChange={(e) => handleChange("tier", e.target.value)}
-          />
-        </div>
-
-        <div>
-          <label className="text-sm font-medium">Conceptual Content</label>
-          <Textarea
-            value={formData.content}
-            onChange={(e) => handleChange("content", e.target.value)}
-            rows={8}
-            placeholder="Develop the ethical, conceptual, or philosophical context to be considered by the AI..."
-          />
-        </div>
-
-        <div>
-          <label className="text-sm font-medium">
-            Tags (separated by commas)
-          </label>
-          <Textarea
-            value={formData.tags.join(", ")}
-            onChange={(e) => handleTagsChange(e.target.value)}
-            placeholder="bioethics, principlism, autonomy, justice, beneficence..."
-            rows={2}
-          />
+          <div>
+            <label className="text-sm font-medium">Tags (separated by commas)</label>
+            <Textarea
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              onBlur={syncTags}
+              onKeyDown={(e) => e.key === "Enter" && syncTags()}
+              placeholder="bioethics, principlism, autonomy..."
+              rows={compact ? 2 : 3}
+            />
+          </div>
         </div>
       </CardContent>
-      <CardFooter>
-        <Button
-          onClick={handleSubmit}
-          disabled={isSubmitting}
-          className="w-full"
-        >
+      <CardFooter className={compact ? "pt-2" : undefined}>
+        <Button onClick={handleSubmit} disabled={isSubmitting} className="w-full">
           {isSubmitting ? "Submitting..." : "📤 Submit Context"}
         </Button>
       </CardFooter>
