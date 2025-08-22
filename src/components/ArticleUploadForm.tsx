@@ -172,10 +172,14 @@ export default function ArticleUploadForm({
       !formData.title ||
       !formData.author ||
       !formData.sourceId ||
-      formData.domain_ref.length <= 0
+      formData.domain_ref.length <= 0 ||
+      !formData.content ||
+      !formData.publication_date ||
+      !formData.tags ||
+      !formData.tier 
     ) {
       toast.error(
-        "Please fill in required fields: ID, title, author, and domain."
+        "Please fill in required fields: ID, title, author, content, tags, tier and publication_date."
       );
       setIsSubmitting(false);
       return;
@@ -343,6 +347,7 @@ export default function ArticleUploadForm({
                           }
                         }}
                         className="size-4"
+                        required
                       />
                       <span>
                         {d.domain} ({d.priority})
@@ -355,48 +360,52 @@ export default function ArticleUploadForm({
           </div>
 
           <div>
-            <label className="text-sm font-medium">Tier Level</label>
+            <label className="text-sm font-medium">Tier Level (required)</label>
             <Input
               type="number"
               min="1"
               max="3"
               value={formData.tier}
               onChange={(e) => handleChange("tier", e.target.value)}
+              required
             />
           </div>
 
           <div>
-            <label className="text-sm font-medium">Content / Summary</label>
+            <label className="text-sm font-medium">Content / Summary (required)</label>
             <Textarea
               value={formData.content}
               onChange={(e) => handleChange("content", e.target.value)}
               rows={compact ? 5 : 6}
               placeholder="Enter the article content or summary..."
+              required
             />
           </div>
 
           <div>
-            <label className="text-sm font-medium">Article URL</label>
+            <label className="text-sm font-medium">Article URL (required)</label>
             <Input
               type="url"
               value={formData.url}
               onChange={(e) => handleChange("url", e.target.value)}
               placeholder="https://journalofmedicalethics.bmj.com/content/29/5/303"
+              required
             />
           </div>
 
           <div>
-            <label className="text-sm font-medium">Publication Date</label>
+            <label className="text-sm font-medium">Publication Date (required)</label>
             <Input
               type="date"
               value={formData.publication_date}
               onChange={(e) => handleChange("publication_date", e.target.value)}
+              required
             />
           </div>
 
           <div>
             <label className="text-sm font-medium">
-              Tags (separated by commas)
+              Tags (separated by commas) (required)
             </label>
             <Textarea
               value={tagInput}
@@ -405,6 +414,7 @@ export default function ArticleUploadForm({
               onKeyDown={(e) => e.key === "Enter" && syncTags()}
               placeholder="halakhic-responsa, bioethics, genetics..."
               rows={compact ? 2 : 3}
+              required
             />
           </div>
         </div>

@@ -176,10 +176,11 @@ export default function BookUploadForm({
       !formData.title ||
       !formData.author ||
       !formData.sourceId ||
-      formData.domain_ref.length === 0
+      formData.domain_ref.length === 0 ||
+      !formData.content
     ) {
       toast.error(
-        "Please fill in required fields: ID, title, author, and at least one domain."
+        "Please fill in required fields: ID, title, author, and at least one content."
       );
       setIsSubmitting(false);
       return;

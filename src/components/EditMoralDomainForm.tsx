@@ -106,7 +106,6 @@ export default function EditMoralDomainForm({
 
   const handleSubmit = async () => {
     if (!formData) return;
-    console.log("formdata",formData)
     if (!formData._additional.id.trim()) {
       toast.error("Domain id is required.");
       return;
@@ -210,6 +209,7 @@ export default function EditMoralDomainForm({
             value={formData.domain}
             onChange={(e) => handleChange("domain", e.target.value)}
             placeholder="e.g.: Moral Foundations"
+            required
           />
         </div>
 
@@ -219,6 +219,7 @@ export default function EditMoralDomainForm({
             value={formData.priority}
             onChange={(e) => handleChange("priority", e.target.value)}
             placeholder="e.g.: foundational"
+            required
           />
         </div>
 
@@ -228,6 +229,7 @@ export default function EditMoralDomainForm({
             value={formData.anchor_behavior}
             onChange={(e) => handleChange("anchor_behavior", e.target.value)}
             placeholder="e.g.: global"
+            required
           />
         </div>
 
@@ -237,6 +239,7 @@ export default function EditMoralDomainForm({
             value={formData.override_policy}
             onChange={(e) => handleChange("override_policy", e.target.value)}
             placeholder="e.g.: non-removable"
+            required
           />
         </div>
 
@@ -246,6 +249,7 @@ export default function EditMoralDomainForm({
             value={formData.binding}
             onChange={(e) => handleChange("binding", e.target.value)}
             placeholder="e.g.: all_domains"
+            required
           />
         </div>
 
@@ -255,6 +259,7 @@ export default function EditMoralDomainForm({
             value={formData.bound_to}
             onChange={(e) => handleChange("bound_to", e.target.value)}
             placeholder="e.g.: Moral Foundations"
+            required
           />
         </div>
 
@@ -267,6 +272,7 @@ export default function EditMoralDomainForm({
             }
             rows={5}
             placeholder="Describe the core ethical policy..."
+            required
           />
         </div>
 
@@ -279,6 +285,7 @@ export default function EditMoralDomainForm({
             }
             rows={5}
             placeholder="Justification for clinical use..."
+            required
           />
         </div>
 
@@ -295,6 +302,7 @@ export default function EditMoralDomainForm({
             rows={6}
             className="font-mono text-sm"
             placeholder="Torah and Tanakh&#10;Dennis Prager & Joseph Telushkin..."
+            required
           />
         </div>
 
@@ -311,6 +319,7 @@ export default function EditMoralDomainForm({
             rows={5}
             className="font-mono text-sm"
             placeholder="Rabbi J. David Bleich...&#10;Fred Rosner..."
+            required
           />
         </div>
 
@@ -327,6 +336,7 @@ export default function EditMoralDomainForm({
             rows={5}
             className="font-mono text-sm"
             placeholder="Jewish Medical Ethics...&#10;Rabbinical Council..."
+            required
           />
         </div>
       </CardContent>
