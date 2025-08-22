@@ -61,11 +61,14 @@ export default function SearchByDomainPage() {
   );
 
   const [responseRequirements, setresponseRequirements] =
-  useState(`- If context quality is LOW or LIMITED, begin your response by clearly stating: "Based on the available limited sources..."
-  - If you cannot provide a substantive answer due to insufficient context, state this clearly and specify what type of information would be needed
-  - Always cite your sources appropriately using the provided context
-  - Prioritize book sources over articles when both are available
-  - If recommending clinical consultation, be specific about what type of specialist or additional assessment might be helpful`);
+  useState(`Provide a direct answer based only on the provided sources.
+
+If the information is not found, respond simply with:
+"Not enough information was found in the provided sources."
+
+Do not add extra context, speculation, or external references.
+
+Keep the response concise and clear.`);
 
   const [domains, setDomains] = useState<Domain[]>([]);
   const [loadingDomains, setLoadingDomains] = useState(true);
