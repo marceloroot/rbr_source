@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,9 +35,18 @@ interface Domain {
   priority: string;
 }
 
+interface Pagination {
+  currentPage: number;
+  totalPages: number;
+  totalItems: number;
+  itemsPerPage: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+}
+
 export default function SearchByDomainPage() {
   const [question, setQuestion] = useState(
-    "What are the diagnostic criteria for type 2 diabetes mellitus?"
+    "What was the name of the large NIH study that involved close to 49,000 people to test whether a low-fat diet reduces the risk of heart disease or cancer?"
   );
   const [domain, setDomain] = useState("");
   const [tier, setTier] = useState(3);
@@ -52,11 +60,17 @@ export default function SearchByDomainPage() {
     "Provide life-affirming, evidence-based guidance that prioritizes human dignity and wellbeing."
   );
 
+  const [responseRequirements, setresponseRequirements] =
+  useState(`- If context quality is LOW or LIMITED, begin your response by clearly stating: "Based on the available limited sources..."
+  - If you cannot provide a substantive answer due to insufficient context, state this clearly and specify what type of information would be needed
+  - Always cite your sources appropriately using the provided context
+  - Prioritize book sources over articles when both are available
+  - If recommending clinical consultation, be specific about what type of specialist or additional assessment might be helpful`);
+
   const [domains, setDomains] = useState<Domain[]>([]);
   const [loadingDomains, setLoadingDomains] = useState(true);
   const [loadingSearch, setLoadingSearch] = useState(false);
   const [result, setResult] = useState<any>(null);
-
   // Modal/Table state
   const [manageOpen, setManageOpen] = useState(false);
   const [chunks, setChunks] = useState<any[]>([]);
@@ -64,7 +78,6 @@ export default function SearchByDomainPage() {
   const [filterTypes, setFilterTypes] = useState<string[]>(["book"]);
   const [filterTiers, setFilterTiers] = useState<number[]>([1, 2]);
   const [filterPrefixes, setFilterPrefixes] = useState<string>("");
-
   const [showForm, setShowForm] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -91,13 +104,25 @@ export default function SearchByDomainPage() {
   const [editingDomainName, setEditingDomainName] = useState<string | null>(
     null
   );
-
   const [editBookOpen, setEditBookOpen] = useState(false);
   const [editingBookId, setEditingBookId] = useState<string | null>(null);
   const [editArticleOpen, setEditArticleOpen] = useState(false);
   const [editingArticleId, setEditingArticleId] = useState<string | null>(null);
   const [editContextOpen, setEditContextOpen] = useState(false);
   const [editingContextId, setEditingContextId] = useState<string | null>(null);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [limit] = useState(20);
+  const [pagination, setPagination] = useState<Pagination>({
+    currentPage: 1,
+    totalPages: 1,
+    totalItems: 0,
+    itemsPerPage: 20,
+    hasNextPage: false,
+    hasPrevPage: false
+  });
+
   const apiBase = () =>
     process.env.NEXT_PUBLIC_ROUTE ?? "http://localhost:3333";
 
@@ -169,7 +194,7 @@ export default function SearchByDomainPage() {
     });
   };
 
-  const loadChunks = async () => {
+  const loadChunks = async (page = 1) => {
     setLoadingChunks(true);
     try {
       const body = {
@@ -179,8 +204,9 @@ export default function SearchByDomainPage() {
           .split(",")
           .map((s) => s.trim())
           .filter(Boolean),
+        page: page,
+        limit: limit
       };
-
       const response = await fetch(
         `${apiBase()}/source/getall-filter-advanced`,
         {
@@ -189,14 +215,30 @@ export default function SearchByDomainPage() {
           body: JSON.stringify(body),
         }
       );
-
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
-
       const data = await response.json();
-      setChunks(Array.isArray(data?.chunks) ? data.chunks : []);
+      
+      // Handle the new response structure with pagination
+      if (data?.chunks?.data) {
+        setChunks(data.chunks.data);
+        if (data.chunks.pagination) {
+          setPagination(data.chunks.pagination);
+          setCurrentPage(data.chunks.pagination.currentPage);
+        }
+      } else {
+        setChunks([]);
+        setPagination({
+          currentPage: 1,
+          totalPages: 1,
+          totalItems: 0,
+          itemsPerPage: limit,
+          hasNextPage: false,
+          hasPrevPage: false
+        });
+      }
     } catch (error: any) {
       toast.error(
         error?.message?.includes("Failed to fetch")
@@ -211,7 +253,7 @@ export default function SearchByDomainPage() {
 
   useEffect(() => {
     if (manageOpen) {
-      loadChunks();
+      loadChunks(currentPage);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [manageOpen]);
@@ -221,6 +263,7 @@ export default function SearchByDomainPage() {
       prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]
     );
   };
+
   const toggleTier = (n: number) => {
     setFilterTiers((prev) =>
       prev.includes(n) ? prev.filter((x) => x !== n) : [...prev, n]
@@ -247,12 +290,10 @@ export default function SearchByDomainPage() {
       .split(",")
       .map((s) => s.trim())
       .filter(Boolean);
-
     if (prefixes.length === 0) {
       toast.error("Provide at least one prefix to delete.");
       return;
     }
-
     await confirmAsyncWithToast(
       `Delete all chunk sources for prefix(es): ${prefixes.join(
         ", "
@@ -296,19 +337,14 @@ export default function SearchByDomainPage() {
           `Bulk delete finished. Success: ${successCount}, Errors: ${errorCount}.`
         );
         setBulkDeleting(false);
-        await loadChunks();
+        await loadChunks(currentPage);
       },
       "Delete",
       "Cancel"
     );
   };
 
-  const onAddNew = () => {
-    resetForm();
-    setEditingIndex(null);
-    setShowForm(true);
-    setEditOpen(true);
-  };
+
 
   const onEdit = (index: number) => {
     const item = chunks[index];
@@ -321,12 +357,10 @@ export default function SearchByDomainPage() {
         toast.error("Book ID not found.");
         return;
       }
-
       setEditingBookId(bookId);
       setEditBookOpen(true);
       return;
     }
-
     if (type === "article") {
       const articleId = item?._additional?.id;
       if (!articleId) {
@@ -337,7 +371,6 @@ export default function SearchByDomainPage() {
       setEditArticleOpen(true);
       return;
     }
-
     if (type === "context") {
       const contextId = item?._additional?.id;
       if (!contextId) {
@@ -348,7 +381,6 @@ export default function SearchByDomainPage() {
       setEditContextOpen(true);
       return;
     }
-
     // Para outros tipos (article, context, etc.), usa o formulário genérico
     setFormData({
       sourceId: item?.sourceId || "",
@@ -374,7 +406,6 @@ export default function SearchByDomainPage() {
       toast.error("This item has no _additional.id to delete.");
       return;
     }
-
     await confirmAsyncWithToast(
       `Delete item ${item?.sourceId || id}?`,
       async () => {
@@ -424,7 +455,6 @@ export default function SearchByDomainPage() {
       toast.error("Title and type are required.");
       return;
     }
-
     if (editingIndex === null) {
       setChunks((prev) => [
         {
@@ -472,20 +502,17 @@ export default function SearchByDomainPage() {
       toast.error("Please fill in the question and select the domain.");
       return;
     }
-
     setLoadingSearch(true);
     setResult(null);
-
     try {
       const body = {
         question: question.trim(),
         tier,
         instructions,
         moral_foundation: moralFoundation,
+        responseRequirements,
       };
-
       console.log("Sending body:", body);
-
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_ROUTE}/source/serach-by-domain`,
         {
@@ -496,22 +523,18 @@ export default function SearchByDomainPage() {
           body: JSON.stringify(body),
         }
       );
-
       if (!response.ok) {
         const errorText = await response.text();
         console.error("API Error:", errorText);
         throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
-
       const data = await response.json();
       console.log("Full response:", data);
-
       if (!data.answer || data.answer === "") {
         toast.warning(
           "The answer came empty. Please check the submitted data."
         );
       }
-
       setResult(data);
       toast.success("✅ Response generated successfully!");
     } catch (error: any) {
@@ -524,6 +547,66 @@ export default function SearchByDomainPage() {
     } finally {
       setLoadingSearch(false);
     }
+  };
+
+  // Pagination handlers
+  const goToPage = (page: number) => {
+    if (page >= 1 && page <= pagination.totalPages) {
+      setCurrentPage(page);
+      loadChunks(page);
+    }
+  };
+
+  const goToNextPage = () => {
+    if (pagination.hasNextPage) {
+      goToPage(currentPage + 1);
+    }
+  };
+
+  const goToPreviousPage = () => {
+    if (pagination.hasPrevPage) {
+      goToPage(currentPage - 1);
+    }
+  };
+
+  const goToFirstPage = () => {
+    goToPage(1);
+  };
+
+  const goToLastPage = () => {
+    goToPage(pagination.totalPages);
+  };
+
+  const getPageNumbers = () => {
+    const pages = [];
+    const totalPages = pagination.totalPages;
+    const currentPage = pagination.currentPage;
+
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      pages.push(1);
+      
+      if (currentPage > 4) {
+        pages.push('...');
+      }
+      
+      for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+        pages.push(i);
+      }
+      
+      if (currentPage < totalPages - 3) {
+        pages.push('...');
+      }
+      
+      if (totalPages > 1) {
+        pages.push(totalPages);
+      }
+    }
+    
+    return pages;
   };
 
   return (
@@ -549,7 +632,6 @@ export default function SearchByDomainPage() {
           </Button>
         </div>
       </div>
-
       <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
         {/* Form */}
         <Card className="lg:col-span-1">
@@ -569,7 +651,6 @@ export default function SearchByDomainPage() {
                 placeholder="e.g.: What are the four foundational principles..."
               />
             </div>
-
             <div>
               <label className="text-sm font-medium">Tier Level</label>
               <Input
@@ -580,7 +661,6 @@ export default function SearchByDomainPage() {
                 onChange={(e) => setTier(parseInt(e.target.value) || 3)}
               />
             </div>
-
             <div>
               <label className="text-sm font-medium">Moral Foundation</label>
               <Textarea
@@ -590,7 +670,6 @@ export default function SearchByDomainPage() {
                 placeholder="e.g.: Prioritize sanctity of life and healing obligations..."
               />
             </div>
-
             <div>
               <label className="text-sm font-medium">AI Instructions</label>
               <Textarea
@@ -598,6 +677,16 @@ export default function SearchByDomainPage() {
                 onChange={(e) => setInstructions(e.target.value)}
                 rows={6}
                 placeholder="1. Answer based ONLY on the provided sources above..."
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium">AI Response Requirements</label>
+              <Textarea
+                value={responseRequirements}
+                onChange={(e) => setresponseRequirements(e.target.value)}
+                rows={6}
+                placeholder="If context quality is LOW or LIMITED, begin your response by clearly stating..."
               />
             </div>
           </CardContent>
@@ -611,7 +700,6 @@ export default function SearchByDomainPage() {
             </Button>
           </CardFooter>
         </Card>
-
         {/* Result */}
         <Card className="lg:col-span-2 flex flex-col">
           <CardHeader>
@@ -655,7 +743,6 @@ export default function SearchByDomainPage() {
         <span className="capitalize">{result.search_strategy_used}</span>
       </div>
     </div>
-
     {/* Qualidade do Contexto e Resposta */}
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs mt-2">
       {/* Qualidade do Contexto */}
@@ -668,7 +755,6 @@ export default function SearchByDomainPage() {
         </h4>
         <p className="mt-1">{result.context_quality.reason}</p>
       </div>
-
       {/* Qualidade da Resposta */}
       <div className="p-3 bg-green-50 dark:bg-green-900/30 rounded text-green-800 dark:text-green-300">
         <h4 className="font-medium flex items-center gap-1">
@@ -690,7 +776,6 @@ export default function SearchByDomainPage() {
         </p>
       </div>
     </div>
-
     {/* Fontes Usadas */}
     <details className="w-full mt-3">
       <summary className="text-xs font-medium text-primary cursor-pointer hover:underline flex items-center gap-1">
@@ -715,7 +800,6 @@ export default function SearchByDomainPage() {
             </ul>
           </div>
         )}
-
         {result.sources.articles?.length > 0 && (
           <div>
             <strong className="text-sm">📄 Articles (Tier 2)</strong>
@@ -731,7 +815,6 @@ export default function SearchByDomainPage() {
             </ul>
           </div>
         )}
-
         {result.sources.contexts?.length > 0 && (
           <div>
             <strong className="text-sm">💡 Contexts (Tier 3)</strong>
@@ -747,13 +830,11 @@ export default function SearchByDomainPage() {
             </ul>
           </div>
         )}
-
         {result.total_sources === 0 && (
           <p className="text-muted-foreground italic">No sources were used.</p>
         )}
       </div>
     </details>
-
     {/* Prompt Completo */}
     <details className="w-full">
       <summary className="text-xs font-medium text-primary cursor-pointer hover:underline flex items-center gap-1">
@@ -768,7 +849,6 @@ export default function SearchByDomainPage() {
           </CardFooter>
         </Card>
       </div>
-
       {/* Wide dialog with Table and Actions */}
       <Dialog open={manageOpen} onOpenChange={setManageOpen}>
         <DialogContent
@@ -778,7 +858,6 @@ export default function SearchByDomainPage() {
           <DialogHeader>
             <DialogTitle>Manage Sources</DialogTitle>
           </DialogHeader>
-
           {/* Filtros */}
           <div className="p-4 border-b space-y-3">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -830,7 +909,7 @@ export default function SearchByDomainPage() {
             <div className="flex items-center gap-2">
               <Button
                 size="sm"
-                onClick={loadChunks}
+                onClick={() => loadChunks(1)}
                 disabled={loadingChunks}
                 className="cursor-pointer"
               >
@@ -915,7 +994,6 @@ export default function SearchByDomainPage() {
               </Button>
             </div>
           </div>
-
           {/* Create Dialog (Book/Article/Context) */}
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>
             <DialogContent
@@ -943,7 +1021,6 @@ export default function SearchByDomainPage() {
               </div>
             </DialogContent>
           </Dialog>
-
           {/* Dialog para Editar Domínio */}
           <Dialog open={editDomainOpen} onOpenChange={setEditDomainOpen}>
             <DialogContent
@@ -1000,7 +1077,6 @@ export default function SearchByDomainPage() {
               </div>
             </DialogContent>
           </Dialog>
-
           {/* Dialog para Editar Livro */}
           <Dialog open={editBookOpen} onOpenChange={setEditBookOpen}>
             <DialogContent
@@ -1018,7 +1094,7 @@ export default function SearchByDomainPage() {
                       onSuccess={() => {
                         toast.success("📚 Book updated successfully!");
                         setEditBookOpen(false);
-                        loadChunks(); // Atualiza a tabela
+                        loadChunks(currentPage); // Atualiza a tabela
                       }}
                       onCancel={() => setEditBookOpen(false)}
                     />
@@ -1031,8 +1107,7 @@ export default function SearchByDomainPage() {
               </div>
             </DialogContent>
           </Dialog>
-
-          {/* Dialog para Editar atricle */}
+          {/* Dialog para Editar article */}
           <Dialog open={editArticleOpen} onOpenChange={setEditArticleOpen}>
             <DialogContent className="sm:max-w-4xl max-h-[90vh] h-[90vh] overflow-hidden flex flex-col">
               <DialogHeader>
@@ -1046,7 +1121,7 @@ export default function SearchByDomainPage() {
                       onSuccess={() => {
                         toast.success("Article updated!");
                         setEditArticleOpen(false);
-                        loadChunks(); // Atualiza tabela
+                        loadChunks(currentPage); // Atualiza tabela
                       }}
                       onCancel={() => setEditArticleOpen(false)}
                     />
@@ -1057,7 +1132,6 @@ export default function SearchByDomainPage() {
               </div>
             </DialogContent>
           </Dialog>
-
           {/* Dialog para Editar Context */}
           <Dialog open={editContextOpen} onOpenChange={setEditContextOpen}>
             <DialogContent className="sm:max-w-4xl max-h-[90vh] h-[90vh] overflow-hidden flex flex-col">
@@ -1072,7 +1146,7 @@ export default function SearchByDomainPage() {
                       onSuccess={() => {
                         toast.success("Context updated!");
                         setEditContextOpen(false);
-                        loadChunks(); // Atualiza tabela
+                        loadChunks(currentPage); // Atualiza tabela
                       }}
                       onCancel={() => setEditContextOpen(false)}
                     />
@@ -1083,7 +1157,6 @@ export default function SearchByDomainPage() {
               </div>
             </DialogContent>
           </Dialog>
-
           {/* Tabela */}
           <div className="p-0">
             <ScrollArea className="h-[60vh]">
@@ -1175,6 +1248,70 @@ export default function SearchByDomainPage() {
               </table>
             </ScrollArea>
           </div>
+          
+          {/* Pagination Controls */}
+          {!loadingChunks && chunks.length > 0 && (
+            <div className="p-4 border-t flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="text-sm text-muted-foreground">
+                Showing {chunks.length} of {pagination.totalItems} items
+                {' • '}
+                Page {pagination.currentPage} of {pagination.totalPages}
+              </div>
+              
+              <div className="flex items-center gap-1">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={goToFirstPage}
+                  disabled={!pagination.hasPrevPage || loadingChunks}
+                  className="h-8 px-2"
+                >
+                  «
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={goToPreviousPage}
+                  disabled={!pagination.hasPrevPage || loadingChunks}
+                  className="h-8 px-2"
+                >
+                  ‹
+                </Button>
+                
+                {getPageNumbers().map((pageNum, index) => (
+                  <Button
+                    key={index}
+                    size="sm"
+                    variant={pageNum === currentPage ? "default" : "outline"}
+                    onClick={() => typeof pageNum === 'number' && goToPage(pageNum)}
+                    disabled={typeof pageNum !== 'number' || loadingChunks}
+                    className={`h-8 w-8 ${typeof pageNum !== 'number' ? 'cursor-default' : ''}`}
+                  >
+                    {pageNum}
+                  </Button>
+                ))}
+                
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={goToNextPage}
+                  disabled={!pagination.hasNextPage || loadingChunks}
+                  className="h-8 px-2"
+                >
+                  ›
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={goToLastPage}
+                  disabled={!pagination.hasNextPage || loadingChunks}
+                  className="h-8 px-2"
+                >
+                  »
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
