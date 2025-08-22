@@ -1,4 +1,3 @@
-// components/SubmitForm.tsx
 "use client";
 
 import { useState } from "react";
@@ -15,7 +14,7 @@ import {
 } from "@/components/ui/card";
 import { toast } from "sonner";
 
-// Tipo para os dados
+// Type for the data
 interface MoralDomainData {
   domain_name: string;
   priority: string;
@@ -30,7 +29,7 @@ interface MoralDomainData {
   clinical_reference_rationale: string;
 }
 
-// Dados iniciais (agora como valor padrão, mas editável)
+// Default data (editable)
 const defaultData: MoralDomainData = {
   domain_name: "Moral Foundations",
   priority: "foundational",
@@ -66,19 +65,17 @@ const defaultData: MoralDomainData = {
     "This domain serves as the inviolable moral spine of GoldCare AI, ensuring that all medical recommendations and advice are grounded in Jewish ethical principles that have guided healthcare decisions for millennia. The domain prioritizes the sanctity of human life (pikuach nefesh), the obligation to heal (refuah), and ethical medical practice as defined by Jewish law and wisdom. This moral framework cannot be overridden by clinical considerations alone, as it provides the essential ethical foundation that distinguishes GoldCare from purely secular medical AI systems. Every recommendation must pass through this moral filter to ensure alignment with Jewish values while providing the highest quality medical guidance.",
 };
 
-
-
 export default function SubmitForm() {
-  // Estado com todos os campos editáveis
+  // State with all editable fields
   const [formData, setFormData] = useState<MoralDomainData>(defaultData);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Atualiza campos simples
+  // Update simple fields
   const handleChange = (field: keyof MoralDomainData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  // Atualiza campos de lista (string → array)
+  // Update array fields (string → array)
   const handleArrayChange = (
     field: "tier_1_sources" | "tier_2_sources" | "tier_3_sources",
     value: string
@@ -105,48 +102,48 @@ export default function SubmitForm() {
       );
 
       if (response.ok) {
-        toast.success("✅ Domínio moral enviado com sucesso.");
+        toast.success("✅ Moral domain submitted successfully.");
       } else {
-        // Tenta ler como JSON primeiro
+        // Try to read as JSON first
         let errorData;
         const contentType = response.headers.get("content-type");
         if (contentType && contentType.includes("application/json")) {
           errorData = await response.json();
         } else {
-          // Se não for JSON, usa texto
+          // If not JSON, use text
           errorData = { error: await response.text() };
         }
 
-        // Trata o erro com base na estrutura conhecida
+        // Handle error based on known structure
         if (errorData.error) {
           if (errorData.error.includes("already exists")) {
             const domainName =
               errorData.existing?.domain || formData.domain_name;
 
-            // Mostra toast com opção de ver detalhes
-            toast.error(`⚠️ Domínio "${domainName}" já existe`, {
+            // Show toast with option to view details
+            toast.error(`⚠️ Domain "${domainName}" already exists`, {
               description: (
                 <div className="mt-2 text-sm">
                   <p className="text-red-500">
-                    Este domínio já está registrado com as mesmas políticas.
+                    This domain is already registered with the same policies.
                   </p>
                   <Button
                     variant="secondary"
                     size="sm"
                     className="mt-2"
                     onClick={() => {
-                      console.log("Domínio existente:", errorData.existing);
-                      toast.info("Detalhes no console");
+                      console.log("Existing domain:", errorData.existing);
+                      toast.info("Details in console");
                     }}
                   >
-                    Ver no console
+                    View in console
                   </Button>
                 </div>
               ),
               duration: 5000,
             });
 
-            // Opcional: atualiza o formulário com os dados existentes
+            // Optional: update form with existing data
             if (errorData.existing) {
               setFormData({
                 domain_name: errorData.existing.domain,
@@ -165,19 +162,19 @@ export default function SubmitForm() {
               });
             }
           } else {
-            toast.error(`❌ Erro: ${errorData.error}`);
+            toast.error(`❌ Error: ${errorData.error}`);
           }
         } else {
-          toast.error("❌ Falha ao enviar: Resposta inesperada do servidor.");
+          toast.error("❌ Submission failed: Unexpected server response.");
         }
       }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
-      console.error("Erro de rede ou outro problema:", error);
+      console.error("Network or other error:", error);
       toast.error(
         error.message
           ? `🌐 ${error.message}`
-          : "❌ Não foi possível conectar ao servidor. Verifique se a API está rodando."
+          : "❌ Could not connect to server. Please check if the API is running."
       );
     } finally {
       setIsSubmitting(false);
@@ -187,98 +184,94 @@ export default function SubmitForm() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Editar e Enviar Domínio</CardTitle>
+        <CardTitle>Submit Domain</CardTitle>
         <CardDescription>
-          Preencha ou ajuste os campos e envie ao sistema GoldCare AI.
+          Fill in or adjust the fields and submit to the GoldCare AI system.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div>
-          <label className="text-sm font-medium">Nome do Domínio</label>
+          <label className="text-sm font-medium">Domain Name</label>
           <Input
             value={formData.domain_name}
             onChange={(e) => handleChange("domain_name", e.target.value)}
-            placeholder="Ex: Moral Foundations"
+            placeholder="e.g.: Moral Foundations"
           />
         </div>
 
         <div>
-          <label className="text-sm font-medium">Prioridade</label>
+          <label className="text-sm font-medium">Priority</label>
           <Input
             value={formData.priority}
             onChange={(e) => handleChange("priority", e.target.value)}
-            placeholder="Ex: foundational"
+            placeholder="e.g.: foundational"
           />
         </div>
 
         <div>
-          <label className="text-sm font-medium">Comportamento de Âncora</label>
+          <label className="text-sm font-medium">Anchor Behavior</label>
           <Input
             value={formData.anchor_behavior}
             onChange={(e) => handleChange("anchor_behavior", e.target.value)}
-            placeholder="Ex: global"
+            placeholder="e.g.: global"
           />
         </div>
 
         <div>
-          <label className="text-sm font-medium">
-            Política de Substituição
-          </label>
+          <label className="text-sm font-medium">Override Policy</label>
           <Input
             value={formData.override_policy}
             onChange={(e) => handleChange("override_policy", e.target.value)}
-            placeholder="Ex: non-removable"
+            placeholder="e.g.: non-removable"
           />
         </div>
 
         <div>
-          <label className="text-sm font-medium">Vinculação</label>
+          <label className="text-sm font-medium">Binding</label>
           <Input
             value={formData.binding}
             onChange={(e) => handleChange("binding", e.target.value)}
-            placeholder="Ex: all_domains"
+            placeholder="e.g.: all_domains"
           />
         </div>
 
         <div>
-          <label className="text-sm font-medium">Vinculado a</label>
+          <label className="text-sm font-medium">Bound To</label>
           <Input
             value={formData.bound_to}
             onChange={(e) => handleChange("bound_to", e.target.value)}
-            placeholder="Ex: Moral Foundations"
+            placeholder="e.g.: Moral Foundations"
           />
         </div>
 
         <div>
-          <label className="text-sm font-medium">
-            Política de Herança Moral
-          </label>
+          <label className="text-sm font-medium">Moral Inheritance Policy</label>
           <Textarea
             value={formData.moral_inheritance_policy}
             onChange={(e) =>
               handleChange("moral_inheritance_policy", e.target.value)
             }
             rows={5}
-            placeholder="Descreva a política ética central..."
+            placeholder="Describe the core ethical policy..."
           />
         </div>
 
         <div>
-          <label className="text-sm font-medium">Justificativa Clínica</label>
+          <label className="text-sm font-medium">Clinical Reference Rationale</label>
           <Textarea
             value={formData.clinical_reference_rationale}
             onChange={(e) =>
               handleChange("clinical_reference_rationale", e.target.value)
             }
             rows={5}
-            placeholder="Justificativa para uso clínico..."
+            placeholder="Justification for clinical use..."
           />
         </div>
 
-        {/* Campos de lista: Tier 1 */}
+        {/* List fields: Tier 1 */}
         <div>
           <label className="text-sm font-medium">
-            Fontes Tier 1 (uma por linha)
+            Tier 1 Sources (one per line)
           </label>
           <Textarea
             value={formData.tier_1_sources.join("\n")}
@@ -294,7 +287,7 @@ export default function SubmitForm() {
         {/* Tier 2 */}
         <div>
           <label className="text-sm font-medium">
-            Fontes Tier 2 (uma por linha)
+            Tier 2 Sources (one per line)
           </label>
           <Textarea
             value={formData.tier_2_sources.join("\n")}
@@ -310,7 +303,7 @@ export default function SubmitForm() {
         {/* Tier 3 */}
         <div>
           <label className="text-sm font-medium">
-            Fontes Tier 3 (uma por linha)
+            Tier 3 Sources (one per line)
           </label>
           <Textarea
             value={formData.tier_3_sources.join("\n")}
@@ -329,7 +322,7 @@ export default function SubmitForm() {
           disabled={isSubmitting}
           className="w-full"
         >
-          {isSubmitting ? "Enviando..." : "📤 Enviar Domínio Moral"}
+          {isSubmitting ? "Submitting..." : "📤 Submit Moral Domain"}
         </Button>
       </CardFooter>
     </Card>

@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/card";
 import { toast } from "sonner";
 
-// Tipo para os dados
+// Type for the data
 interface MoralDomainData {
   domain: string;
   priority: string;
@@ -29,11 +29,12 @@ interface MoralDomainData {
   tier_2_sources: string[];
   tier_3_sources: string[];
   clinical_reference_rationale: string;
+  _additional:{id:string}
 }
 
 interface EditMoralDomainFormProps {
   domainName: string;
-  onSuccess?: () => void; // Callback opcional após sucesso
+  onSuccess?: () => void; // Optional callback after success
   onCancel?: () => void;
 }
 
@@ -46,7 +47,7 @@ export default function EditMoralDomainForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Carregar dados do domínio ao montar
+  // Load domain data on mount
   useEffect(() => {
     const fetchDomain = async () => {
       try {
@@ -57,21 +58,21 @@ export default function EditMoralDomainForm({
 
         if (!response.ok) {
           const errorText = await response.text();
-          throw new Error(`Falha ao carregar domínio: ${response.status} ${errorText}`);
+          throw new Error(`Failed to load domain: ${response.status} ${errorText}`);
         }
 
         const data: MoralDomainData = await response.json();
 
-        // Validação básica
+        // Basic validation
         if (!data) {
-          throw new Error("Dados inválidos recebidos da API.");
+          throw new Error("Invalid data received from API.");
         }
-
+        console.log("datata",data)
         setFormData(data);
       } catch (error: any) {
-        console.error("Erro ao carregar domínio:", error);
+        console.error("Error loading domain:", error);
         toast.error(
-          error.message || "Não foi possível carregar o domínio. Verifique o nome ou a conexão."
+          error.message || "Could not load domain. Please check the name or connection."
         );
       } finally {
         setLoading(false);
@@ -81,17 +82,17 @@ export default function EditMoralDomainForm({
     if (domainName) {
       fetchDomain();
     } else {
-      toast.error("Nome do domínio não fornecido.");
+      toast.error("Domain name not provided.");
       setLoading(false);
     }
   }, [domainName]);
 
-  // Atualiza campos simples
+  // Update simple fields
   const handleChange = (field: keyof MoralDomainData, value: string) => {
     setFormData((prev) => (prev ? { ...prev, [field]: value } : null));
   };
 
-  // Atualiza campos de lista (string → array)
+  // Update array fields (string → array)
   const handleArrayChange = (
     field: "tier_1_sources" | "tier_2_sources" | "tier_3_sources",
     value: string
@@ -105,28 +106,32 @@ export default function EditMoralDomainForm({
 
   const handleSubmit = async () => {
     if (!formData) return;
-    if (!formData.domain.trim()) {
-      toast.error("O nome do domínio é obrigatório.");
+    console.log("formdata",formData)
+    if (!formData._additional.id.trim()) {
+      toast.error("Domain id is required.");
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      const encodedName = encodeURIComponent(formData.domain.trim());
+      const encodedName = encodeURIComponent(formData._additional.id.trim());
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { _additional, ...formDataClean } = formData;
       const response = await fetch(
+  
         `${process.env.NEXT_PUBLIC_ROUTE}/source/update-moral-domain/${encodedName}`,
         {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify(formData),
+          body: JSON.stringify(formDataClean),
         }
       );
 
       if (response.ok) {
-        toast.success(`✅ Domínio "${formData.domain}" atualizado com sucesso.`);
+        toast.success(`✅ Domain "${formData.domain}" updated successfully.`);
         if (onSuccess) onSuccess();
       } else {
         let errorData;
@@ -138,19 +143,19 @@ export default function EditMoralDomainForm({
         }
 
         if (errorData.error?.includes("not found")) {
-          toast.error(`❌ Domínio não encontrado: "${formData.domain}"`);
+          toast.error(`❌ Domain not found: "${formData.domain}"`);
         } else if (errorData.error) {
-          toast.error(`❌ Erro: ${errorData.error}`);
+          toast.error(`❌ Error: ${errorData.error}`);
         } else {
-          toast.error("❌ Falha ao atualizar: resposta inesperada do servidor.");
+          toast.error("❌ Update failed: unexpected server response.");
         }
       }
     } catch (error: any) {
-      console.error("Erro de rede ao atualizar domínio:", error);
+      console.error("Network error while updating domain:", error);
       toast.error(
         error.message
           ? `🌐 ${error.message}`
-          : "❌ Não foi possível conectar ao servidor. Verifique se a API está rodando."
+          : "❌ Could not connect to server. Please check if the API is running."
       );
     } finally {
       setIsSubmitting(false);
@@ -161,7 +166,7 @@ export default function EditMoralDomainForm({
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Carregando domínio...</CardTitle>
+          <CardTitle>Loading domain...</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center py-8">
@@ -176,14 +181,14 @@ export default function EditMoralDomainForm({
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Erro ao carregar domínio</CardTitle>
+          <CardTitle>Failed to load domain</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-muted-foreground">Não foi possível carregar os dados do domínio &quot;{domainName}&quot;.</p>
+          <p className="text-muted-foreground">Could not load data for domain &quot;{domainName}&quot;.</p>
         </CardContent>
         <CardFooter>
           <Button variant="secondary" onClick={onCancel}>
-            Voltar
+            Back
           </Button>
         </CardFooter>
       </Card>
@@ -193,94 +198,94 @@ export default function EditMoralDomainForm({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Editar Domínio: {formData.domain}</CardTitle>
+        <CardTitle>Edit Domain: {formData.domain}</CardTitle>
         <CardDescription>
-          Atualize os campos e salve as alterações no sistema GoldCare AI.
+          Update the fields and save changes to the GoldCare AI system.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div>
-          <label className="text-sm font-medium">Nome do Domínio</label>
+          <label className="text-sm font-medium">Domain Name</label>
           <Input
             value={formData.domain}
             onChange={(e) => handleChange("domain", e.target.value)}
-            placeholder="Ex: Moral Foundations"
+            placeholder="e.g.: Moral Foundations"
           />
         </div>
 
         <div>
-          <label className="text-sm font-medium">Prioridade</label>
+          <label className="text-sm font-medium">Priority</label>
           <Input
             value={formData.priority}
             onChange={(e) => handleChange("priority", e.target.value)}
-            placeholder="Ex: foundational"
+            placeholder="e.g.: foundational"
           />
         </div>
 
         <div>
-          <label className="text-sm font-medium">Comportamento de Âncora</label>
+          <label className="text-sm font-medium">Anchor Behavior</label>
           <Input
             value={formData.anchor_behavior}
             onChange={(e) => handleChange("anchor_behavior", e.target.value)}
-            placeholder="Ex: global"
+            placeholder="e.g.: global"
           />
         </div>
 
         <div>
-          <label className="text-sm font-medium">Política de Substituição</label>
+          <label className="text-sm font-medium">Override Policy</label>
           <Input
             value={formData.override_policy}
             onChange={(e) => handleChange("override_policy", e.target.value)}
-            placeholder="Ex: non-removable"
+            placeholder="e.g.: non-removable"
           />
         </div>
 
         <div>
-          <label className="text-sm font-medium">Vinculação</label>
+          <label className="text-sm font-medium">Binding</label>
           <Input
             value={formData.binding}
             onChange={(e) => handleChange("binding", e.target.value)}
-            placeholder="Ex: all_domains"
+            placeholder="e.g.: all_domains"
           />
         </div>
 
         <div>
-          <label className="text-sm font-medium">Vinculado a</label>
+          <label className="text-sm font-medium">Bound To</label>
           <Input
             value={formData.bound_to}
             onChange={(e) => handleChange("bound_to", e.target.value)}
-            placeholder="Ex: Moral Foundations"
+            placeholder="e.g.: Moral Foundations"
           />
         </div>
 
         <div>
-          <label className="text-sm font-medium">Política de Herança Moral</label>
+          <label className="text-sm font-medium">Moral Inheritance Policy</label>
           <Textarea
             value={formData.moral_inheritance_policy}
             onChange={(e) =>
               handleChange("moral_inheritance_policy", e.target.value)
             }
             rows={5}
-            placeholder="Descreva a política ética central..."
+            placeholder="Describe the core ethical policy..."
           />
         </div>
 
         <div>
-          <label className="text-sm font-medium">Justificativa Clínica</label>
+          <label className="text-sm font-medium">Clinical Reference Rationale</label>
           <Textarea
             value={formData.clinical_reference_rationale}
             onChange={(e) =>
               handleChange("clinical_reference_rationale", e.target.value)
             }
             rows={5}
-            placeholder="Justificativa para uso clínico..."
+            placeholder="Justification for clinical use..."
           />
         </div>
 
         {/* Tier 1 Sources */}
         <div>
           <label className="text-sm font-medium">
-            Fontes Tier 1 (uma por linha)
+            Tier 1 Sources (one per line)
           </label>
           <Textarea
             value={formData.tier_1_sources.join("\n")}
@@ -296,7 +301,7 @@ export default function EditMoralDomainForm({
         {/* Tier 2 Sources */}
         <div>
           <label className="text-sm font-medium">
-            Fontes Tier 2 (uma por linha)
+            Tier 2 Sources (one per line)
           </label>
           <Textarea
             value={formData.tier_2_sources.join("\n")}
@@ -312,7 +317,7 @@ export default function EditMoralDomainForm({
         {/* Tier 3 Sources */}
         <div>
           <label className="text-sm font-medium">
-            Fontes Tier 3 (uma por linha)
+            Tier 3 Sources (one per line)
           </label>
           <Textarea
             value={formData.tier_3_sources.join("\n")}
@@ -331,7 +336,7 @@ export default function EditMoralDomainForm({
           disabled={isSubmitting}
           className="flex-1"
         >
-          {isSubmitting ? "Salvando..." : "💾 Salvar Alterações"}
+          {isSubmitting ? "Saving..." : "💾 Save Changes"}
         </Button>
         {onCancel && (
           <Button
@@ -339,7 +344,7 @@ export default function EditMoralDomainForm({
             onClick={onCancel}
             disabled={isSubmitting}
           >
-            Cancelar
+            Cancel
           </Button>
         )}
       </CardFooter>
