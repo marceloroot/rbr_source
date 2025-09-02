@@ -211,7 +211,7 @@ Keep the response concise and clear.`);
         limit: limit
       };
       const response = await fetch(
-        `${apiBase()}/source/getall-filter-advanced`,
+        `${apiBase()}/source/getall-filter-mongoose-advanced`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -355,7 +355,7 @@ Keep the response concise and clear.`);
     console.log("chunk", item);
     // Se for um livro, abre o formulário especializado
     if (type === "book") {
-      const bookId = item?._additional?.id;
+      const bookId = item._id;
       if (!bookId) {
         toast.error("Book ID not found.");
         return;
@@ -365,7 +365,7 @@ Keep the response concise and clear.`);
       return;
     }
     if (type === "article") {
-      const articleId = item?._additional?.id;
+      const articleId = item._id;
       if (!articleId) {
         toast.error("Article ID not found.");
         return;
@@ -375,7 +375,7 @@ Keep the response concise and clear.`);
       return;
     }
     if (type === "context") {
-      const contextId = item?._additional?.id;
+      const contextId = item._id;
       if (!contextId) {
         toast.error("Context ID not found.");
         return;
@@ -404,9 +404,9 @@ Keep the response concise and clear.`);
 
   const onDelete = async (index: number) => {
     const item = chunks[index];
-    const id = item?._additional?.id;
+    const id = item.sourceId;
     if (!id) {
-      toast.error("This item has no _additional.id to delete.");
+      toast.error("This item has no sourceId to delete.");
       return;
     }
     await confirmAsyncWithToast(
@@ -415,7 +415,7 @@ Keep the response concise and clear.`);
         setDeletingIndex(index);
         try {
           let response = await fetch(
-            `${apiBase()}/source/delete-by-id-chunk-source/${encodeURIComponent(
+            `${apiBase()}/source/delete-all-chunk-source/${encodeURIComponent(
               id
             )}`,
             { method: "DELETE" }
@@ -423,7 +423,7 @@ Keep the response concise and clear.`);
           if (!response.ok) {
             if (response.status === 405 || response.status === 404) {
               response = await fetch(
-                `${apiBase()}/source/delete-by-id-chunk-source/${encodeURIComponent(
+                `${apiBase()}/source/delete-all-chunk-source/${encodeURIComponent(
                   id
                 )}`
               );

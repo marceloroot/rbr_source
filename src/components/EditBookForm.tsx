@@ -74,7 +74,7 @@ export default function EditBookForm({ bookId, onSuccess, onCancel }: EditBookFo
       if (!bookId) return;
       setLoading(true);
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_ROUTE}/source/get-chunk-by-id/${bookId}`);
+        const response = await fetch(`${process.env.NEXT_PUBLIC_ROUTE}/source/get-mongoose-source-by-id/${bookId}`);
         if (!response.ok) {
           if (response.status === 404) {
             toast.error("❌ Book not found.");
@@ -164,6 +164,7 @@ export default function EditBookForm({ bookId, onSuccess, onCancel }: EditBookFo
 
     // Payload com apenas os campos modificáveis (PATCH)
     const payload = {
+      sourceId: formData.sourceId,
       title: formData.title,
       author: formData.author,
       tier: formData.tier,

@@ -81,7 +81,7 @@ export default function EditContextForm({ contextId, onSuccess, onCancel }: Edit
       if (!contextId) return;
       setLoading(true);
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_ROUTE}/source/get-chunk-by-id/${contextId}`);
+        const response = await fetch(`${process.env.NEXT_PUBLIC_ROUTE}/source/get-mongoose-source-by-id/${contextId}`);
         if (!response.ok) {
           if (response.status === 404) {
             toast.error("❌ Context not found.");
@@ -166,6 +166,7 @@ export default function EditContextForm({ contextId, onSuccess, onCancel }: Edit
 
     // Payload com apenas campos modificáveis (PATCH)
     const payload = {
+      sourceId: formData.sourceId,
       title: formData.title,
       tier: formData.tier,
       content: formData.content,

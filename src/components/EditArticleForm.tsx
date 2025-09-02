@@ -77,7 +77,7 @@ export default function EditArticleForm({
       if (!articleId) return;
       setLoading(true);
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_ROUTE}/source/get-chunk-by-id/${articleId}`);
+        const response = await fetch(`${process.env.NEXT_PUBLIC_ROUTE}/source/get-mongoose-source-by-id/${articleId}`);
         if (!response.ok) {
           if (response.status === 404) {
             toast.error("❌ Article not found.");
@@ -165,6 +165,7 @@ export default function EditArticleForm({
 
     // Payload com apenas campos modificáveis (PATCH)
     const payload = {
+      sourceId: formData.sourceId,
       title: formData.title,
       author: formData.author,
       tier: formData.tier,
