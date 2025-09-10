@@ -198,8 +198,21 @@ export default function ArticleUploadForm({
       );
 
       if (response.ok) {
-        toast.success("✅ Article submitted successfully!");
-        // Reset with default domain
+        const jobResponse = await response.json();
+        
+        // Display job information
+        toast.success("✅ Article ingestion job created successfully!", {
+          description: (
+            <div className="mt-2 text-sm space-y-1">
+              <p className="text-primary"><strong>Job ID:</strong> {jobResponse.jobId}</p>
+              <p className="text-primary"><strong>Status:</strong> {jobResponse.status}</p>
+              <p className="text-primary"><strong>Estimated time:</strong> {jobResponse.estimatedProcessingTime}</p>
+            </div>
+          ),
+          duration: 8000,
+        });
+
+        // Reset form after successful job creation
         setFormData({
           ...defaultArticle,
           domain_ref:
@@ -245,9 +258,9 @@ export default function ArticleUploadForm({
   return (
     <Card className={compact ? "shadow-none border-0" : undefined}>
       <CardHeader className={compact ? "pb-2" : undefined}>
-        <CardTitle>Submit Scientific Article</CardTitle>
+        <CardTitle>Create Article Ingestion Job</CardTitle>
         <CardDescription>
-          Enter article details for ingestion into the moral domain.
+          Enter article details to create an ingestion job for processing into the moral domain.
         </CardDescription>
       </CardHeader>
       <CardContent className={compact ? "space-y-4" : "space-y-6"}>
@@ -425,7 +438,7 @@ export default function ArticleUploadForm({
           disabled={isSubmitting}
           className="w-full"
         >
-          {isSubmitting ? "Submitting..." : "📤 Submit Article"}
+          {isSubmitting ? "Creating job..." : "📤 Create Article Ingestion Job"}
         </Button>
       </CardFooter>
     </Card>

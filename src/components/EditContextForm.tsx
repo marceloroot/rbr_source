@@ -184,7 +184,20 @@ export default function EditContextForm({ contextId, onSuccess, onCancel }: Edit
       });
 
       if (response.ok) {
-        toast.success("✅ Context updated successfully!");
+        const jobResponse = await response.json();
+        
+        // Display job information
+        toast.success("✅ Context update job created successfully!", {
+          description: (
+            <div className="mt-2 text-sm space-y-1">
+              <p className="text-primary"><strong>Job ID:</strong> {jobResponse.jobId}</p>
+              <p className="text-primary"><strong>Status:</strong> {jobResponse.status}</p>
+              <p className="text-primary"><strong>Estimated time:</strong> {jobResponse.estimatedProcessingTime}</p>
+            </div>
+          ),
+          duration: 8000,
+        });
+
         if (onSuccess) onSuccess();
       } else {
         let errorData;
@@ -240,9 +253,9 @@ export default function EditContextForm({ contextId, onSuccess, onCancel }: Edit
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Edit Context: {formData.title}</CardTitle>
+        <CardTitle>Update Context: {formData.title}</CardTitle>
         <CardDescription>
-          Update the details of this ethical context in the GoldCare system.
+          Update the details of this ethical context to create an update job in the GoldCare system.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -328,7 +341,7 @@ export default function EditContextForm({ contextId, onSuccess, onCancel }: Edit
       </CardContent>
       <CardFooter className="flex gap-2">
         <Button onClick={handleSubmit} disabled={isSubmitting} className="flex-1">
-          {isSubmitting ? "Saving..." : "💾 Save Changes"}
+          {isSubmitting ? "Creating job..." : "💾 Create Update Job"}
         </Button>
         {onCancel && (
           <Button variant="secondary" onClick={onCancel} disabled={isSubmitting}>

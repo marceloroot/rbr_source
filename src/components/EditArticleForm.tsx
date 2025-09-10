@@ -186,7 +186,20 @@ export default function EditArticleForm({
       });
 
       if (response.ok) {
-        toast.success("✅ Article updated successfully!");
+        const jobResponse = await response.json();
+        
+        // Display job information
+        toast.success("✅ Article update job created successfully!", {
+          description: (
+            <div className="mt-2 text-sm space-y-1">
+              <p className="text-primary"><strong>Job ID:</strong> {jobResponse.jobId}</p>
+              <p className="text-primary"><strong>Status:</strong> {jobResponse.status}</p>
+              <p className="text-primary"><strong>Estimated time:</strong> {jobResponse.estimatedProcessingTime}</p>
+            </div>
+          ),
+          duration: 8000,
+        });
+
         if (onSuccess) onSuccess();
       } else {
         let errorData;
@@ -242,9 +255,9 @@ export default function EditArticleForm({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Edit Article: {formData.title}</CardTitle>
+        <CardTitle>Update Article: {formData.title}</CardTitle>
         <CardDescription>
-          Update the details of this article in the GoldCare system.
+          Update the details of this article to create an update job in the GoldCare system.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -359,7 +372,7 @@ export default function EditArticleForm({
       </CardContent>
       <CardFooter className="flex gap-2">
         <Button onClick={handleSubmit} disabled={isSubmitting} className="flex-1">
-          {isSubmitting ? "Saving..." : "💾 Save Changes"}
+          {isSubmitting ? "Creating job..." : "💾 Create Update Job"}
         </Button>
         {onCancel && (
           <Button variant="secondary" onClick={onCancel} disabled={isSubmitting}>

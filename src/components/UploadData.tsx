@@ -199,7 +199,21 @@ export default function BookUploadForm({
       );
 
       if (response.ok) {
-        toast.success("✅ Book submitted successfully!");
+        const jobResponse = await response.json();
+        
+        // Display job information
+        toast.success("✅ Book ingestion job created successfully!", {
+          description: (
+            <div className="mt-2 text-sm space-y-1">
+              <p className="text-primary"><strong>Job ID:</strong> {jobResponse.jobId}</p>
+              <p className="text-primary"><strong>Status:</strong> {jobResponse.status}</p>
+              <p className="text-primary"><strong>Estimated time:</strong> {jobResponse.estimatedProcessingTime}</p>
+            </div>
+          ),
+          duration: 8000,
+        });
+
+        // Reset form after successful job creation
         setFormData({
           ...defaultBook,
           domain_ref:
@@ -248,9 +262,9 @@ export default function BookUploadForm({
   return (
     <Card className={compact ? "shadow-none border-0" : undefined}>
       <CardHeader className={compact ? "pb-2" : undefined}>
-        <CardTitle>Submit Book or Chapter</CardTitle>
+        <CardTitle>Create Book Ingestion Job</CardTitle>
         <CardDescription>
-          Enter the book details for ingestion into the moral domain.
+          Enter the book details to create an ingestion job for processing into the moral domain.
         </CardDescription>
       </CardHeader>
       <CardContent className={compact ? "space-y-4" : "space-y-6"}>
@@ -424,7 +438,7 @@ export default function BookUploadForm({
           disabled={isSubmitting}
           className="w-full"
         >
-          {isSubmitting ? "Submitting..." : "📤 Submit Book"}
+          {isSubmitting ? "Creating job..." : "📤 Create Book Ingestion Job"}
         </Button>
       </CardFooter>
     </Card>

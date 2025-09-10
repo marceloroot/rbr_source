@@ -29,6 +29,8 @@ import EditMoralDomainForm from "@/components/EditMoralDomainForm";
 import EditBookForm from "@/components/EditBookForm";
 import EditArticleForm from "@/components/EditArticleForm";
 import EditContextForm from "@/components/EditContextForm";
+import Link from "next/link";
+import { Clock } from "lucide-react";
 
 interface Domain {
   domain: string;
@@ -326,6 +328,21 @@ Keep the response concise and clear.`);
               const errorText = await response.text();
               throw new Error(`HTTP ${response.status}: ${errorText}`);
             }
+            
+            const jobResponse = await response.json();
+            
+            // Display job information for each prefix
+            toast.success(`✅ Delete job created for prefix '${p}'!`, {
+              description: (
+                <div className="mt-2 text-sm space-y-1">
+                  <p className="text-primary"><strong>Job ID:</strong> {jobResponse.jobId}</p>
+                  <p className="text-primary"><strong>Status:</strong> {jobResponse.status}</p>
+                  <p className="text-primary"><strong>Estimated time:</strong> {jobResponse.estimatedProcessingTime}</p>
+                </div>
+              ),
+              duration: 6000,
+            });
+            
             successCount += 1;
           } catch (error: any) {
             errorCount += 1;
@@ -337,7 +354,7 @@ Keep the response concise and clear.`);
           }
         }
         toast.success(
-          `Bulk delete finished. Success: ${successCount}, Errors: ${errorCount}.`
+          `Bulk delete jobs created. Success: ${successCount}, Errors: ${errorCount}.`
         );
         setBulkDeleting(false);
         await loadChunks(currentPage);
@@ -352,7 +369,6 @@ Keep the response concise and clear.`);
   const onEdit = (index: number) => {
     const item = chunks[index];
     const type = item?.type;
-    console.log("chunk", item);
     // Se for um livro, abre o formulário especializado
     if (type === "book") {
       const bookId = item._id;
@@ -433,8 +449,23 @@ Keep the response concise and clear.`);
             const errorText = await response.text();
             throw new Error(`HTTP ${response.status}: ${errorText}`);
           }
+          
+          const jobResponse = await response.json();
+          
+          // Display job information
+          toast.success("✅ Delete job created successfully!", {
+            description: (
+              <div className="mt-2 text-sm space-y-1">
+                <p className="text-primary"><strong>Job ID:</strong> {jobResponse.jobId}</p>
+                <p className="text-primary"><strong>Status:</strong> {jobResponse.status}</p>
+                <p className="text-primary"><strong>Estimated time:</strong> {jobResponse.estimatedProcessingTime}</p>
+              </div>
+            ),
+            duration: 8000,
+          });
+
+          // Remove item from local state immediately for better UX
           setChunks((prev) => prev.filter((_, i) => i !== index));
-          toast.success("Item deleted successfully.");
         } catch (error: any) {
           toast.error(
             error?.message?.includes("Failed to fetch")
@@ -515,7 +546,6 @@ Keep the response concise and clear.`);
         moral_foundation: moralFoundation,
         responseRequirements,
       };
-      console.log("Sending body:", body);
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_ROUTE}/source/serach-by-domain`,
         {
@@ -532,7 +562,6 @@ Keep the response concise and clear.`);
         throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
       const data = await response.json();
-      console.log("Full response:", data);
       if (!data.answer || data.answer === "") {
         toast.warning(
           "The answer came empty. Please check the submitted data."
@@ -625,13 +654,24 @@ Keep the response concise and clear.`);
             needed.
           </p>
         </div>
-        <div className="pt-1">
+        <div className="pt-1 flex gap-2">
           <Button
             variant="secondary"
             onClick={() => setManageOpen(true)}
             className="cursor-pointer"
           >
             📚 Open Sources Table
+          </Button>
+
+          <Button
+            variant="outline"
+            asChild
+            className="cursor-pointer"
+          >
+            <Link href={"/client/jobs"} className="flex items-center gap-2">
+              <Clock size={16} />
+              View Jobs
+            </Link>
           </Button>
         </div>
       </div>
@@ -993,7 +1033,7 @@ Keep the response concise and clear.`);
                 disabled={bulkDeleting || loadingChunks}
                 className="cursor-pointer"
               >
-                {bulkDeleting ? "Deleting by Prefix..." : "Delete by Prefix"}
+                {bulkDeleting ? "Creating jobs..." : "Delete by Prefix"}
               </Button>
             </div>
           </div>
@@ -1147,7 +1187,6 @@ Keep the response concise and clear.`);
                     <EditContextForm
                       contextId={editingContextId}
                       onSuccess={() => {
-                        toast.success("Context updated!");
                         setEditContextOpen(false);
                         loadChunks(currentPage); // Atualiza tabela
                       }}
@@ -1240,7 +1279,7 @@ Keep the response concise and clear.`);
                               disabled={deletingIndex === idx}
                               className="cursor-pointer"
                             >
-                              {deletingIndex === idx ? "Deleting..." : "Delete"}
+                              {deletingIndex === idx ? "Creating job..." : "Delete"}
                             </Button>
                           </div>
                         </td>

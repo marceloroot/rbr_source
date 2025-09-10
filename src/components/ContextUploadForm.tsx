@@ -90,7 +90,7 @@ export default function ContextUploadForm({ compact = false }: ContextUploadForm
     };
 
     fetchDomains();
-  }, []);
+  }, [formData.domain_ref.length]);
 
   // Sincroniza tags
   useEffect(() => {
@@ -184,8 +184,21 @@ export default function ContextUploadForm({ compact = false }: ContextUploadForm
       });
 
       if (response.ok) {
-        toast.success("✅ Context submitted successfully!");
-        // Reset com domínio padrão
+        const jobResponse = await response.json();
+        
+        // Display job information
+        toast.success("✅ Context ingestion job created successfully!", {
+          description: (
+            <div className="mt-2 text-sm space-y-1">
+              <p className="text-primary"><strong>Job ID:</strong> {jobResponse.jobId}</p>
+              <p className="text-primary"><strong>Status:</strong> {jobResponse.status}</p>
+              <p className="text-primary"><strong>Estimated time:</strong> {jobResponse.estimatedProcessingTime}</p>
+            </div>
+          ),
+          duration: 8000,
+        });
+
+        // Reset form after successful job creation
         setFormData({
           ...defaultContext,
           domain_ref: domains.length > 0 ? [{ id: domains[0]._additional.id }] : [],
@@ -222,9 +235,9 @@ export default function ContextUploadForm({ compact = false }: ContextUploadForm
   return (
     <Card className={compact ? "shadow-none border-0" : undefined}>
       <CardHeader className={compact ? "pb-2" : undefined}>
-        <CardTitle>Submit Ethical Context</CardTitle>
+        <CardTitle>Create Context Ingestion Job</CardTitle>
         <CardDescription>
-          Enter a moral or conceptual context to enrich the AI&apos;s decision-making domain.
+          Enter a moral or conceptual context to create an ingestion job for processing into the AI&apos;s decision-making domain.
         </CardDescription>
       </CardHeader>
       <CardContent className={compact ? "space-y-4" : "space-y-6"}>
@@ -326,7 +339,7 @@ export default function ContextUploadForm({ compact = false }: ContextUploadForm
       </CardContent>
       <CardFooter className={compact ? "pt-2" : undefined}>
         <Button onClick={handleSubmit} disabled={isSubmitting} className="w-full">
-          {isSubmitting ? "Submitting..." : "📤 Submit Context"}
+          {isSubmitting ? "Creating job..." : "📤 Create Context Ingestion Job"}
         </Button>
       </CardFooter>
     </Card>

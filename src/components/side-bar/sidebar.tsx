@@ -15,7 +15,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Home,  Menu, ChevronLeft, LogOut,  Book, FileText, Layers, Search } from "lucide-react";
+import { Home,  Menu, ChevronLeft, LogOut,  Book, FileText, Layers, Search, Clock } from "lucide-react";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -85,6 +85,12 @@ const SidebarContent = ({
       label: "Domains",
       icon: <Home size={20} />,
       href: "/client/domain",
+    },
+    {
+      id: "jobs",
+      label: "Jobs",
+      icon: <Clock size={20} />,
+      href: "/client/jobs",
     },
     {
       id: "book",

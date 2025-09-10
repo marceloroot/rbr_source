@@ -67,7 +67,6 @@ export default function EditMoralDomainForm({
         if (!data) {
           throw new Error("Invalid data received from API.");
         }
-        console.log("datata",data)
         setFormData(data);
       } catch (error: any) {
         console.error("Error loading domain:", error);
