@@ -532,8 +532,8 @@ Keep the response concise and clear.`);
   }, []);
 
   const handleSearch = async () => {
-    if (!question.trim() || !domain) {
-      toast.error("Please fill in the question and select the domain.");
+    if (!question.trim() ) {
+      toast.error("Please fill in the question.");
       return;
     }
     setLoadingSearch(true);
@@ -768,7 +768,7 @@ Keep the response concise and clear.`);
           {result && (
   <>
     {/* Estatísticas principais */}
-    <div className="text-xs text-muted-foreground w-full grid grid-cols-2 md:grid-cols-4 gap-4 pt-2">
+    <div className="text-xs text-muted-foreground w-full grid grid-cols-2 md:grid-cols-5 gap-4 pt-2">
       <div className="flex flex-col">
         <span className="font-medium">Tier Searched</span>
         <span>{result.tiers_searched}</span>
@@ -784,6 +784,12 @@ Keep the response concise and clear.`);
       <div className="flex flex-col">
         <span className="font-medium">Strategy</span>
         <span className="capitalize">{result.search_strategy_used}</span>
+      </div>
+      <div className="flex flex-col">
+        <span className="font-medium">Internet Search</span>
+        <span className={`flex items-center gap-1 ${result.internetSearchUsed ? 'text-green-600' : 'text-gray-500'}`}>
+          {result.internetSearchUsed ? '✅ Used' : '❌ Not Used'}
+        </span>
       </div>
     </div>
     {/* Qualidade do Contexto e Resposta */}
@@ -819,6 +825,80 @@ Keep the response concise and clear.`);
         </p>
       </div>
     </div>
+    {/* AI Analysis */}
+    {result.aiAnalysis && (
+      <details className="w-full mt-3">
+        <summary className="text-xs font-medium text-primary cursor-pointer hover:underline flex items-center gap-1">
+          🤖 AI Analysis (Confidence: {result.aiAnalysis.confidence}%)
+        </summary>
+        <div className="mt-2 p-3 bg-muted rounded text-xs max-h-60 overflow-auto space-y-3">
+          <div>
+            <strong className="text-sm">🎯 AI Answer:</strong>
+            <p className="mt-1 text-sm leading-relaxed">{result.aiAnalysis.answer}</p>
+          </div>
+          <div>
+            <strong className="text-sm">🧠 Reasoning:</strong>
+            <p className="mt-1 text-sm leading-relaxed">{result.aiAnalysis.reasoning}</p>
+          </div>
+          {result.aiAnalysis.sources && result.aiAnalysis.sources.length > 0 && (
+            <div>
+              <strong className="text-sm">🔗 AI Sources:</strong>
+              <ul className="list-disc list-inside mt-1 ml-2 space-y-1">
+                {result.aiAnalysis.sources.map((source: string, index: number) => (
+                  <li key={index} className="text-xs">
+                    <a 
+                      href={source} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline break-all"
+                    >
+                      {source}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      </details>
+    )}
+
+    {/* Internet Search Results */}
+    {result.internetSearchUsed && result.internetResults && (
+      <details className="w-full mt-3">
+        <summary className="text-xs font-medium text-primary cursor-pointer hover:underline flex items-center gap-1">
+          🌐 Internet Search Results ({result.internetResults.totalResults} found)
+        </summary>
+        <div className="mt-2 p-3 bg-muted rounded text-xs max-h-60 overflow-auto space-y-3">
+          <div>
+            <strong className="text-sm">🔍 Search Query:</strong>
+            <p className="mt-1 text-sm italic">{result.internetResults.searchQuery}</p>
+          </div>
+          {result.internetResults.results && result.internetResults.results.length > 0 && (
+            <div>
+              <strong className="text-sm">📄 Results:</strong>
+              <ul className="list-disc list-inside mt-1 ml-2 space-y-2">
+                {result.internetResults.results.map((result: any, index: number) => (
+                  <li key={index} className="text-xs">
+                    <div className="font-medium">{result.title}</div>
+                    <a 
+                      href={result.url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline text-xs break-all"
+                    >
+                      {result.url}
+                    </a>
+                    <p className="mt-1 text-xs text-muted-foreground">{result.snippet}</p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      </details>
+    )}
+
     {/* Fontes Usadas */}
     <details className="w-full mt-3">
       <summary className="text-xs font-medium text-primary cursor-pointer hover:underline flex items-center gap-1">
@@ -1135,7 +1215,7 @@ Keep the response concise and clear.`);
                     <EditBookForm
                       bookId={editingBookId}
                       onSuccess={() => {
-                        toast.success("📚 Book updated successfully!");
+                       
                         setEditBookOpen(false);
                         loadChunks(currentPage); // Atualiza a tabela
                       }}
